@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Galeri Foto — Dengan Musik</title>
+<style>
+  :root{ --bg:#0f1720; --card:#0b1220; --accent: #0a6bfe; }
+  body{ margin:0; font-family: system-ui, -apple-system, "SF UI", Roboto, sans-serif; background:var(--bg); color:#fff; }
+  header{ padding:12px 16px; display:flex; align-items:center; gap:12px; background:linear-gradient(0deg,#071023, #0b1220); box-shadow:0 4px 20px rgba(0,0,0,.6); position:sticky; top:0; z-index:20;}
+  header h1{ margin:0; font-size:18px; font-weight:600; }
+  .container{ padding:18px; max-width:1200px; margin:0 auto; }
+  .grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); gap:12px; }
+  .thumb{ background:var(--card); border-radius:10px; overflow:hidden; cursor:pointer; position:relative; min-height:110px; display:flex; align-items:center; justify-content:center; }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; transition: transform .25s ease; }
+  .thumb:hover img{ transform:scale(1.05); }
+  .controls{ display:flex; gap:8px; margin:12px 0; align-items:center; }
+  .btn{ background:rgba(255,255,255,0.06); color:#fff; padding:8px 12px; border-radius:8px; border:0; cursor:pointer; font-weight:600; }
+  .modal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.85); z-index:1000; }
+  .modal.open{ display:flex; }
+  .modal-content{ max-width:90vw; max-height:90vh; position:relative; }
+  .modal-content img{ max-width:100%; max-height:100%; display:block; border-radius:8px; }
+  .nav{ position:absolute; top:50%; transform:translateY(-50%); font-size:28px; background:rgba(0,0,0,.35); padding:10px 12px; border-radius:8px; cursor:pointer; user-select:none; }
+  .nav.left{ left:-60px; }
+  .nav.right{ right:-60px; }
+  .close{ position:absolute; top:-60px; right:0; font-size:14px; padding:8px 10px; border-radius:8px; cursor:pointer; }
+  @media (max-width:700px){
+    .nav.left{ left:10px; }
+    .nav.right{ right:10px; }
+    .close{ top:10px; right:10px; }
+  }
+  .caption{ margin-top:8px; text-align:center; font-size:13px; color:#ddd; }
+  .hidden{ display:none; }
+  .audio-controls{ display:flex; align-items:center; gap:8px; margin-left:8px; }
+  .volume{ width:110px; }
+  .small-label{ font-size:13px; color:#cfe; opacity:.9; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Our Love Story</h1>
+  <div style="flex:1"></div>
+
+  <div class="audio-controls" aria-hidden="false">
+    <button id="audioToggle" class="btn" type="button">Play Musik</button>
+    <input id="volumeSlider" class="volume" type="range" min="0" max="1" step="0.01" value="0.5" title="Volume">
+    <span class="small-label" id="audioLabel">Loop • musik.mp3</span>
+  </div>
+
+  <button class="btn" onclick="location.reload()">Muat ulang</button>
+  <button class="btn" onclick="window.close()">Tutup</button>
+</header>
+
+<main class="container">
+  <div class="controls">
+    <button id="playBtn" class="btn">Autoplay Photo</button>
+    <label style="margin-left:auto; font-size:13px; color:#bbb">Two Souls, One Journey, a Thousand Memories</label>
+  </div>
+
+  <div class="grid" id="galleryGrid">
+    <div class="thumb" data-index="0"><img src="img1.jpg" alt="Foto 1"></div>
+    <div class="thumb" data-index="1"><img src="img2.jpg" alt="Foto 2"></div>
+    <div class="thumb" data-index="2"><img src="img3.jpg" alt="Foto 3"></div>
+    <div class="thumb" data-index="3"><img src="img4.jpg" alt="Foto 4"></div>
+    <div class="thumb" data-index="4"><img src="img5.jpg" alt="Foto 5"></div>
+    <div class="thumb" data-index="4"><img src="img6.jpg" alt="Foto 6"></div>
+  </div>
+</main>
+
+<div class="modal" id="modal">
+  <div class="modal-content" id="modalContent">
+    <div class="nav left" id="prevBtn" title="Previous">&#10094;</div>
+    <img id="modalImage" src="" alt="slide">
+    <div class="nav right" id="nextBtn" title="Next">&#10095;</div>
+    <div class="close btn" id="closeBtn">Tutup (Esc)</div>
+    <div class="caption" id="captionText"></div>
+  </div>
+</div>
+
+<audio id="bgAudio" src="musik.mp3" loop preload="auto"></audio>
+
+<script>
+  const thumbs = Array.from(document.querySelectorAll('.thumb'));
+  const images = thumbs.map(t => t.querySelector('img').src);
+  const captions = thumbs.map((t,i) => t.querySelector('img').alt || ('Foto ' + (i+1)));
+
+  const modal = document.getElementById('modal');
+  const modalImage = document.getElementById('modalImage');
+  const captionText = document.getElementById('captionText');
+
+  let currentIndex = 0;
+  let autoplaySlides = false;
+  let autoplayTimer = null;
+  const AUTOPLAY_INTERVAL = 3000;
+
+  modalImage.style.transition = 'opacity .6s ease';
+  modalImage.style.opacity = 0;
+
+  function openModal(index){
+    currentIndex = index;
+    modalImage.src = images[currentIndex];
+    captionText.textContent = captions[currentIndex];
+    fadeIn();
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal(){
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+    stopAutoplaySlides();
+  }
+
+  function fadeIn(){
+    modalImage.style.opacity = 0;
+    setTimeout(()=>{ modalImage.style.opacity = 1; }, 50);
+  }
+
+  function changeImage(newIndex){
+    currentIndex = (newIndex + images.length) % images.length;
+    modalImage.style.opacity = 0;
+    setTimeout(()=>{
+      modalImage.src = images[currentIndex];
+      captionText.textContent = captions[currentIndex];
+      fadeIn();
+    }, 300);
+  }
+
+  function showNext(){
+    changeImage(currentIndex + 1);
+  }
+  function showPrev(){
+    changeImage(currentIndex - 1);
+  }
+
+  thumbs.forEach((t, i) => t.addEventListener('click', ()=> openModal(i)));
+
+  document.getElementById('nextBtn').addEventListener('click', showNext);
+  document.getElementById('prevBtn').addEventListener('click', showPrev);
+  document.getElementById('closeBtn').addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => { if(e.target === modal) closeModal(); });
+
+  document.addEventListener('keydown', (e) => {
+    if(!modal.classList.contains('open')) return;
+    if(e.key === 'ArrowRight') showNext();
+    if(e.key === 'ArrowLeft') showPrev();
+    if(e.key === 'Escape') closeModal();
+  });
+
+  const playBtn = document.getElementById('playBtn');
+  playBtn.addEventListener('click', ()=>{
+    autoplaySlides = !autoplaySlides;
+    if(autoplaySlides) startAutoplaySlides();
+    else stopAutoplaySlides();
+    playBtn.textContent = autoplaySlides ? 'Stop Slide' : 'Autoplay Slide';
+  });
+
+  function startAutoplaySlides(){
+    if(autoplayTimer) clearInterval(autoplayTimer);
+    autoplayTimer = setInterval(showNext, AUTOPLAY_INTERVAL);
+  }
+  function stopAutoplaySlides(){
+    if(autoplayTimer) clearInterval(autoplayTimer);
+    autoplayTimer = null;
+    autoplaySlides = false;
+    playBtn.textContent = 'Autoplay Slide';
+  }
+
+  const audio = document.getElementById('bgAudio');
+  const audioToggle = document.getElementById('audioToggle');
+  const volumeSlider = document.getElementById('volumeSlider');
+  let audioStarted = false;
+
+  function updateAudioButton(){
+    audioToggle.textContent = audio.paused ? 'Play Musik' : 'Pause Musik';
+  }
+
+  function attemptAutoPlay(){
+    audio.volume = parseFloat(volumeSlider.value || 0.5);
+    audio.play().then(()=>{
+      audioStarted = true;
+      updateAudioButton();
+    }).catch(()=>{
+      updateAudioButton();
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', ()=>{
+    attemptAutoPlay();
+    audioToggle.addEventListener('click', ()=>{
+      if (audio.paused) {
+        audio.play().then(()=>{ updateAudioButton(); });
+      } else {
+        audio.pause();
+        updateAudioButton();
+      }
+    });
+
+    volumeSlider.addEventListener('input', ()=>{
+      audio.volume = parseFloat(volumeSlider.value);
+    });
+
+    document.addEventListener('click', function firstClickStart(){
+      if(!audioStarted){
+        audio.play().then(()=>{
+          audioStarted = true;
+          updateAudioButton();
+        });
+      }
+      document.removeEventListener('click', firstClickStart);
+    }, {capture:true});
+  });
+
+  window.addEventListener('blur', ()=> {
+    if(!audio.paused) audio.pause();
+    updateAudioButton();
+  });
+</script>
+</body>
+</html>
