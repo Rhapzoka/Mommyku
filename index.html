@@ -409,6 +409,8 @@
 	  	}
 	  </style>
 	</head>
+
+
 	<body onload="init()">
 		<audio id="myAudio">
 			<source src="music.mp3" type="audio/mpeg">
@@ -434,12 +436,30 @@
 				<div class="contjam">
 					<div class="jam">-:-</div>
 					<div class="tanggal">-</div>
-					<div class="ucapan myoverlay" onclick="carigoogle()"><span id="spannama2"></span></div>	
+					<div class="ucapan myoverlay" onclick="carigoogle()">
+				<span id="spannama2"></span></div>	
 				</div>
 				<div class="shortcut kanan" onclick="toggleFullscreen()">fullscreen</div>
 				<div class="shortcut kiri" onclick="wpblur()">blur</div>
-			</div>
-			<div class="mywindow" id="myform" style="width: 500px; height: 240px">
+				</div>
+<div style="position:absolute; bottom:30px; left:50%; transform:translateX(-50%); z-index:9999; pointer-events:auto;">
+  <button id="openGalleryBtn" type="button" style="padding:10px 18px; border-radius:12px; border:0; cursor:pointer;">
+    Lihat Galeri Foto
+  </button>
+</div>
+
+<script>
+  // ini pastikan berfungsi langsung
+  document.getElementById('openGalleryBtn').addEventListener('click', ()=>{
+    if (typeof window.open === 'function') {
+      window.open('gallery.html', '_blank');
+    } else {
+      alert('Fungsi open tidak tersedia');
+    }
+  });
+</script>
+
+				<div class="mywindow" id="myform" style="width: 500px; height: 240px">
 				<div class="myheader">
 					Welcome Mommy Bila
 				</div>
